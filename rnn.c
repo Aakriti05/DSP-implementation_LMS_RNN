@@ -214,14 +214,26 @@ void gru_single_cell(int h_t_1[], int x_t[], int W_z[], int U_z[], int W_r[], in
 
 void main(){
 	
-	int h_t_1[32] = {0};
-	int x_t[32] = {0};
-	int W_z[32] = {0};
-	int U_z[32] = {0};
-	int W_r[32] = {0};
-	int U_r[32] = {0};
-	int W[32] = {0};
-	int U[32] = {0};
+	i
+void main(){
+
+	int inputs_z[32] = inputs;
+    	int inputs_r[32] = inputs;
+	int inputs_h[32] = inputs;
+
+	int kernel_z[16] = kernel[0:15];
+	int kernel_r[16] = kernel[16:31];
+	int kernel_h[16] = kernel[32:47];
+
+
+	int recurrent_kernel_z[16][16] = recurrent_kernel[:][0:15];
+	int recurrent_kernel_r[16][16] = recurrent_kernel[:][16:31];
+	int recurrent_kernel_h[16][16] = recurrent_kernel[:][32:47];
+
+	int x_z = dot(inputs_z, kernel_z);
+	int x_r = dot(inputs_r, kernel_r);
+	int x_h = dot(inputs_h, kernel_h);
+
 	gru_single_cell(h_t_1, x_t, W_z, U_z, W_r, U_r, W, U);
 	printf("Hello World");
 }
