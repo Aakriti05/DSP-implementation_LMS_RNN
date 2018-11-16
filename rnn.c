@@ -212,13 +212,44 @@ void gru_single_cell(int h_t_1[], int x_t[], int W_z[], int U_z[], int W_r[], in
 	int* h_t = sum_funct(z_t_h_t_1, minus_z_t_h_t_1);
 }
 
-void main(){
-	
-	i
+int* dot(int first_array[], int second_array[]){
+	int* return_array[32];
+
+	for(int k=0; k<32; k++){
+		return_array[k] = (int *)malloc(16*sizeof(int));
+	}
+
+	for(int i=0; i<32; i++){
+		for(int j=0; j<16; j++){
+			return_array[i][j] = first_array[i]*second_array[j];
+		}
+		
+	}
+	return return_array;
+}
+
+int* recurrent_dot(int first_array[], int second_array[]){
+	int* return_array[32];
+
+	for(int k=0; k<32; k++){
+		return_array[k] = (int *)malloc(16*sizeof(int));
+	}
+
+	for(int i=0; i<32; i++){
+		for(int j=0; j<16; j++){
+			for(int l=0; l<16; l++){
+				return_array[i][j] = return_array[i][j]+first_array[i][l]*second_array[l][j];
+			}			
+		}		
+	}
+	return return_array;
+}
+
+
 void main(){
 
 	int inputs_z[32] = inputs;
-    	int inputs_r[32] = inputs;
+    int inputs_r[32] = inputs;
 	int inputs_h[32] = inputs;
 
 	int kernel_z[16] = kernel[0:15];
@@ -230,10 +261,31 @@ void main(){
 	int recurrent_kernel_r[16][16] = recurrent_kernel[:][16:31];
 	int recurrent_kernel_h[16][16] = recurrent_kernel[:][32:47];
 
-	int x_z = dot(inputs_z, kernel_z);
-	int x_r = dot(inputs_r, kernel_r);
-	int x_h = dot(inputs_h, kernel_h);
+	int x_z[32][16] = dot(inputs_z, kernel_z);
+	int x_r[32][16] = dot(inputs_r, kernel_r);
+	int x_h[32][16] = dot(inputs_h, kernel_h);
+	//use bias = True, therefore adding bias to above
+	//reset_after = False, therefor no recurrent_bias
+	int input_bias_z[16] =  gru_bias[0:15];
+	int input_bias_r[16] =  gru_bias[16:31];
+	int input_bias_h[16] =  gru_bias[32:47];
+
+	x_z = bias_add(x_z, input_bias_z);
+	x_r = bias_add(x_r, input_bias_r);
+	x_h = bias_add(x_h, input_bias_h);
+
+
+	int recurrent_z[32][16] = recurrent_dot(h_tm1_z, recurrent_kernel_z);
+	int recurrent_r[32][16] = recurrent_dot(h_tm1_r, recurrent_kernel_r);
+
+	int z[32][16] = recurrent_activation(x_z + recurrent_z)
+	int r[32][16] = recurrent_activation(x_r + recurrent_r)
+
+	int recurrent_h[32][16] = recurrent_dot(hadamard(r, h_tm1_h), recurrent_kernel_h);
+	int hh[32][16] = activation(x_h + recurrent_h);
+	int h[32][16] = hadamard(z, h_tm1) + hadamard((1-h), hh);
+
 
 	gru_single_cell(h_t_1, x_t, W_z, U_z, W_r, U_r, W, U);
-	printf("Hello World");
+	
 }
