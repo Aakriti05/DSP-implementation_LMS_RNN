@@ -4,7 +4,7 @@
 
 #define FILTER_LENGTH 32;
 
-double dense_bias[1] = {0.03699271};
+double dense_bias = 0.03699271;
 
 double dense_kernel[16] = {-0.25279573, -0.5144569, -0.26096338, -0.29290923, -0.30193526, 0.08099364,
 	-0.49538139, 0.2524238, -0.41640353, 0.44727048, 0.34025627, -0.37097168,
@@ -272,13 +272,18 @@ void gru_single_cell(int h_tm1[], int inputs[]){
 
 void main(){
 	
-	int h_tm1[32][16] = {0};
-	int h[16];
-	for(int i=0; i<5; i++){  
-		
+	double h_tm1[32][16] = {0};
+	double h[16]; 
+	double y;
+	for(int i=0; i<5; i++){		
 		h = gru_single_cell(h_tm1, inputs);
 	}
 	//dense layer starting 
+	
+	for(int j=0; j<16; j++){
+		y = y + dense_kernel[j];
+	}
+	y = y+dense_bias;
 	
 	
 }
