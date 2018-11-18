@@ -190,28 +190,6 @@ int* thanh(int sum_stage_2[]){
 	return sum_stage_2;
 }
 
-void gru_single_cell(int h_t_1[], int x_t[], int W_z[], int U_z[], int W_r[], int U_r[], int W[], int U[]){
-	int* W_z_x_t = hadamard(W_z, x_t);
-	int* U_z_h_t_1 = hadamard(U_z, h_t_1);
-	int* sum_update_gate = sum_funct(W_z_x_t, U_z_h_t_1);
-	int* z_t = sigma(sum_update_gate);
-
-	int* W_r_x_t = hadamard(W_r, x_t);
-	int* U_r_h_t_1 = hadamard(U_r, h_t_1);
-	int* sum_reset_gate = sum_funct(W_r_x_t, U_r_h_t_1);
-	int* r_t = sigma(sum_reset_gate);	
-
-	int* W_x_t = hadamard(W, x_t);
-	int* U_h_t_1 = hadamard(U, h_t_1);
-	int* r_t_U_h_t_1 = hadamard(r_t, U_h_t_1);
-	int* current_mem_content = sum_funct(W_x_t, r_t_U_h_t_1);
-	int* h_dash_t = thanh(current_mem_content);	
-
-	int* z_t_h_t_1 = hadamard(z_t, h_t_1);
-	int* minus_z_t_h_t_1 = hadamard(sub_1(z_t), h_t_1);
-	int* h_t = sum_funct(z_t_h_t_1, minus_z_t_h_t_1);
-}
-
 int* dot(int first_array[], int second_array[]){
 	int* return_array[32];
 
@@ -245,17 +223,18 @@ int* recurrent_dot(int first_array[], int second_array[]){
 	return return_array;
 }
 
-
-void main(){
-
+void gru_single_cell(int h_tm1[], int inputs[]){
 	int inputs_z[32] = inputs;
-    int inputs_r[32] = inputs;
+    	int inputs_r[32] = inputs;
 	int inputs_h[32] = inputs;
+	
+	int h_tm1_z[32][16] = h_tm1;
+	int h_tm1_r[32][16] = h_tm1;
+	int h_tm1_h[32][16] = h_tm1;
 
 	int kernel_z[16] = kernel[0:15];
 	int kernel_r[16] = kernel[16:31];
 	int kernel_h[16] = kernel[32:47];
-
 
 	int recurrent_kernel_z[16][16] = recurrent_kernel[:][0:15];
 	int recurrent_kernel_r[16][16] = recurrent_kernel[:][16:31];
@@ -274,7 +253,6 @@ void main(){
 	x_r = bias_add(x_r, input_bias_r);
 	x_h = bias_add(x_h, input_bias_h);
 
-
 	int recurrent_z[32][16] = recurrent_dot(h_tm1_z, recurrent_kernel_z);
 	int recurrent_r[32][16] = recurrent_dot(h_tm1_r, recurrent_kernel_r);
 
@@ -284,8 +262,23 @@ void main(){
 	int recurrent_h[32][16] = recurrent_dot(hadamard(r, h_tm1_h), recurrent_kernel_h);
 	int hh[32][16] = activation(x_h + recurrent_h);
 	int h[32][16] = hadamard(z, h_tm1) + hadamard((1-h), hh);
+	h_tm1 = hh;
+	int* y = (int*) malloc(16 * sizeof(int));
+	for(int i=0; i<16; i++){
+		y[i] = h[31][i];	
+	}
+	return y;
+}
 
-
-	gru_single_cell(h_t_1, x_t, W_z, U_z, W_r, U_r, W, U);
+void main(){
+	
+	int h_tm1[32][16] = {0};
+	int h[16];
+	for(int i=0; i<5; i++){  
+		
+		h = gru_single_cell(h_tm1, inputs);
+	}
+	//dense layer starting 
+	
 	
 }
