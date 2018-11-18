@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 
 #define FILTER_LENGTH 32;
@@ -158,43 +159,82 @@ double recurrent_kernel[16][48] = {{-0.33324564,  0.18633987, -0.46684438, -0.17
   -0.3625467 ,  0.5565551 ,  0.65372646, -0.5217376 ,  0.6831335 ,  0.10624173}};
 
 
-int* hadamard(int first_array[], int second_array[]){
-	int* return_array = (int *)malloc(32*sizeof(int));
+double** hadamard(double* first_array[], double* second_array[]){
+	double** return_array = (double **)malloc(32*sizeof(double*));
+
+	for(int k=0; k<32; k++){
+		return_array[k] = (double *)malloc(16*sizeof(double));
+	}
 	for(int i=0; i<32; i++){
-		return_array[i] = first_array[i]*second_array[i];
+		for(int j=0; j<16; j++){
+			return_array[i][j] = first_array[i][j]*second_array[i][j];
+		}
 	}
 	return return_array;
 }
 
-int* sum_funct(int first_array[], int second_array[]){
-	int* return_array = (int *)malloc(32*sizeof(int));
+double* sum_funct(double first_array[], double second_array[]){
+	double* return_array = (double *)malloc(32*sizeof(double));
 	for(int i=0; i<32; i++){
 		return_array[i] = first_array[i]+second_array[i];
 	}
 	return return_array;
 }
 
-int* sub_1(int first_array[]){
-	int* return_array = (int *)malloc(32*sizeof(int));
+double** sum_funct_2D(double** first_array, double** second_array){
+	double** return_array = (double **)malloc(32*sizeof(double*));
+
+	for(int k=0; k<32; k++){
+		return_array[k] = (double *)malloc(16*sizeof(double));
+	}
+
 	for(int i=0; i<32; i++){
-		return_array[i] = 1-first_array[i];
+		for(int j=0; j<16; j++){
+			return_array[i][j] = first_array[i][j]+second_array[i][j];
+		}
 	}
 	return return_array;
 }
 
-int* sigma(int sum_stage_1[]){
+double** sub_1(double* first_array[]){
+	double** return_array = (double **)malloc(32*sizeof(double*));
+
+	for(int k=0; k<32; k++){
+		return_array[k] = (double *)malloc(16*sizeof(double));
+	}
+	for(int i=0; i<32; i++){
+		for(int j=0; j<16; j++){
+		return_array[i][j] = 1-first_array[i][j];
+	}
+	}
+	return return_array;
+}
+
+double** sigma(double* sum_stage_1[]){
+	for(int i=0; i<32; i++){
+		for(int j=0; j<16; j++){
+			if(sum_stage_1[i][j]<-2.5) sum_stage_1[i][j] = 0;
+			else if(sum_stage_1[i][j]>2.5) sum_stage_1[i][j] = 1;
+			else sum_stage_1[i][j] = (0.2*sum_stage_1[i][j]) + 0.5;
+		}
+	}
 	return sum_stage_1;
 }
 
-int* thanh(int sum_stage_2[]){
+double** thanh(double* sum_stage_2[]){
+	for(int i=0; i<32; i++){
+		for(int j=0; j<16; j++){
+			sum_stage_2[i][j] = 1- (2/(1+exp(2*sum_stage_2[i][j])));
+		}
+	}
 	return sum_stage_2;
 }
 
-int* dot(int first_array[], int second_array[]){
-	int* return_array[32];
+double** dot(int first_array[], double second_array[]){
+	double** return_array = (double **)malloc(32*sizeof(double*));
 
 	for(int k=0; k<32; k++){
-		return_array[k] = (int *)malloc(16*sizeof(int));
+		return_array[k] = (double *)malloc(16*sizeof(double));
 	}
 
 	for(int i=0; i<32; i++){
@@ -206,64 +246,113 @@ int* dot(int first_array[], int second_array[]){
 	return return_array;
 }
 
-int* recurrent_dot(int first_array[], int second_array[]){
-	int* return_array[32];
+double** recurrent_dot(double** first_array, double** second_array){
+	double** return_array = (double **)malloc(32*sizeof(double*));
 
 	for(int k=0; k<32; k++){
-		return_array[k] = (int *)malloc(16*sizeof(int));
+		return_array[k] = (double *)malloc(16*sizeof(double));
 	}
 
 	for(int i=0; i<32; i++){
 		for(int j=0; j<16; j++){
 			for(int l=0; l<16; l++){
-				return_array[i][j] = return_array[i][j]+first_array[i][l]*second_array[l][j];
+				return_array[i][j] = return_array[i][j]+(first_array[i][l]*second_array[l][j]);
 			}			
 		}		
 	}
 	return return_array;
 }
 
-void gru_single_cell(int h_tm1[], int inputs[]){
-	int inputs_z[32] = inputs;
-    	int inputs_r[32] = inputs;
-	int inputs_h[32] = inputs;
-	
-	int h_tm1_z[32][16] = h_tm1;
-	int h_tm1_r[32][16] = h_tm1;
-	int h_tm1_h[32][16] = h_tm1;
+double** bias_add(double** first_array, double* second_array){
+	double** return_array = (double **)malloc(32*sizeof(double*));
 
-	int kernel_z[16] = kernel[0:15];
-	int kernel_r[16] = kernel[16:31];
-	int kernel_h[16] = kernel[32:47];
+	for(int k=0; k<32; k++){
+		return_array[k] = (double *)malloc(16*sizeof(double));
+	}
 
-	int recurrent_kernel_z[16][16] = recurrent_kernel[:][0:15];
-	int recurrent_kernel_r[16][16] = recurrent_kernel[:][16:31];
-	int recurrent_kernel_h[16][16] = recurrent_kernel[:][32:47];
+	for(int i=0; i<32; i++){
+		for(int j=0; j<16; j++){
+			return_array[i][j] = first_array[i][j] + second_array[j];
+		}
+	}
 
-	int x_z[32][16] = dot(inputs_z, kernel_z);
-	int x_r[32][16] = dot(inputs_r, kernel_r);
-	int x_h[32][16] = dot(inputs_h, kernel_h);
+
+	return return_array;
+}
+
+
+double* gru_single_cell(double* h_tm1[16], int inputs[]){
+	int* inputs_z = inputs;
+	int* inputs_r = inputs;
+	int* inputs_h = inputs;
+
+	double** h_tm1_z = h_tm1;
+	double** h_tm1_r = h_tm1;
+	double** h_tm1_h = h_tm1;
+
+	double* kernel_z = (double *)malloc(16*sizeof(double));
+	double* kernel_r = (double *)malloc(16*sizeof(double));
+	double* kernel_h = (double *)malloc(16*sizeof(double));
+
+	double* input_bias_z = (double *)malloc(16*sizeof(double));
+	double* input_bias_r = (double *)malloc(16*sizeof(double));
+	double* input_bias_h = (double *)malloc(16*sizeof(double));
+
+	for(int i=0; i<16; i++){
+		kernel_z[i] = kernel[i];
+		kernel_r[i] = kernel[16+i];
+		kernel_h[i] = kernel[32+i];
+		input_bias_z[i] =  gru_bias[i];
+		input_bias_r[i] =  gru_bias[16+i];
+		input_bias_h[i] =  gru_bias[32+i];
+
+	}
+
+
+
+	double* recurrent_kernel_z[16];
+	for(int k=0; k<16; k++){
+		recurrent_kernel_z[k] = (double *)malloc(16*sizeof(double));
+	}
+	double* recurrent_kernel_r[16];
+	for(int k=0; k<16; k++){
+		recurrent_kernel_r[k] = (double *)malloc(16*sizeof(double));
+	}
+	double* recurrent_kernel_h[16];
+	for(int k=0; k<16; k++){
+		recurrent_kernel_h[k] = (double *)malloc(16*sizeof(double));
+	}
+
+	for(int i=0; i<16; i++){
+		for(int j=0; j<16; j++){
+			recurrent_kernel_z[j][i] = recurrent_kernel[j][i];
+			recurrent_kernel_r[j][i] = recurrent_kernel[j][16+i];
+			recurrent_kernel_h[j][i] = recurrent_kernel[j][32+i];
+		}
+	}
+
+	double** x_z = dot(inputs_z, kernel_z);
+	double** x_r = dot(inputs_r, kernel_r);
+	double** x_h = dot(inputs_h, kernel_h);
 	//use bias = True, therefore adding bias to above
 	//reset_after = False, therefor no recurrent_bias
-	int input_bias_z[16] =  gru_bias[0:15];
-	int input_bias_r[16] =  gru_bias[16:31];
-	int input_bias_h[16] =  gru_bias[32:47];
 
 	x_z = bias_add(x_z, input_bias_z);
 	x_r = bias_add(x_r, input_bias_r);
 	x_h = bias_add(x_h, input_bias_h);
 
-	int recurrent_z[32][16] = recurrent_dot(h_tm1_z, recurrent_kernel_z);
-	int recurrent_r[32][16] = recurrent_dot(h_tm1_r, recurrent_kernel_r);
+	double** recurrent_z = recurrent_dot(h_tm1_z, recurrent_kernel_z);
+	double** recurrent_r = recurrent_dot(h_tm1_r, recurrent_kernel_r);
 
-	int z[32][16] = recurrent_activation(x_z + recurrent_z)
-	int r[32][16] = recurrent_activation(x_r + recurrent_r)
+	double** z = sigma(sum_funct_2D(x_z, recurrent_z));
+	double** r = sigma(sum_funct_2D(x_r, recurrent_r));
 
-	int recurrent_h[32][16] = recurrent_dot(hadamard(r, h_tm1_h), recurrent_kernel_h);
-	int hh[32][16] = activation(x_h + recurrent_h);
-	int h[32][16] = hadamard(z, h_tm1) + hadamard((1-h), hh);
+	double** recurrent_h = recurrent_dot(hadamard(r, h_tm1_h), recurrent_kernel_h);
+	double** hh = thanh(sum_funct_2D(x_h, recurrent_h));
+	double** h = sum_funct_2D(hadamard(z, h_tm1), hadamard(sub_1(z), hh));
 	h_tm1 = hh;
-	int* y = (int*) malloc(16 * sizeof(int));
+	double* y = (double*) malloc(16*sizeof(double));
+
 	for(int i=0; i<16; i++){
 		y[i] = h[31][i];	
 	}
@@ -271,19 +360,35 @@ void gru_single_cell(int h_tm1[], int inputs[]){
 }
 
 void main(){
-	
-	double h_tm1[32][16] = {0};
-	double h[16]; 
-	double y;
+
+	double* h_tm1[32];
+
+	for(int k=0; k<32; k++){
+		h_tm1[k] = (double *)malloc(16*sizeof(double));
+	}
+
+	for(int i=0; i<32; i++){
+		for (int j=0; j<16; j++){
+			h_tm1[i][j] = 0;
+		}
+	}
+
+    int inputs[32];
+    for(int k=0; k<32; k++){
+    	inputs[k] = 1;
+    }
+
+	double* y;
+	double out = 0;
 	for(int i=0; i<5; i++){		
-		h = gru_single_cell(h_tm1, inputs);
+		y = gru_single_cell(h_tm1, inputs);
 	}
 	//dense layer starting 
 	
 	for(int j=0; j<16; j++){
-		y = y + dense_kernel[j];
+		out = out + y[j]*dense_kernel[j];
 	}
-	y = y+dense_bias;
-	
-	
+	out = out + dense_bias;
+	printf("Out = %f\n", out);
+	printf("%f %f\n",exp(1),exp(1.2));	
 }
